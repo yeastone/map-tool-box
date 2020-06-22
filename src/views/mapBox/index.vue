@@ -7,7 +7,7 @@
       <div class="draw-tips-title">当前绘制方式：</div>
       <i class="draw-tips-icon el-icon-star-on"></i>
       <div class="draw-tips-type">{{drawType ==='line' ? '折线':drawType ==='circle'? '圆形':'多边形'}}</div>
-      <el-button class="draw-done" @click="drawDone">完成绘制</el-button>
+      <el-button class="draw-done" @click="drawDone" :disabled="!layerIsEditing">完成绘制</el-button>
       <el-button class="draw-cancel" @click="drawCancel">取消绘制</el-button>
 
     </div>
@@ -36,7 +36,8 @@ export default {
     return {
       addLayerVisible: false,
       drawType: '',
-      allLayer: []
+      allLayer: [],
+      layerIsEditing: false
     }
   },
   async mounted () {
@@ -86,6 +87,20 @@ export default {
     },
     addLayerEditor (e) {
       switch (this.drawType) {
+        case 'line': {
+          this.drawingLayer = new this.AMap.Polyline({
+            map: this.map,
+            path: e.getPath(),
+            ...LAYER_OPTIONS
+          })
+          this.layerEditor = new this.AMap.PolyEditor(this.map, this.drawingLayer)
+          this.layerEditor.open()
+          this.layerIsEditing = true
+          this.layerEditor.on('end', (e) => {
+            this.afterDrawDone(e)
+          })
+          break
+        }
         case 'circle': {
           this.drawingLayer = new this.AMap.Circle({
             map: this.map,
@@ -95,8 +110,24 @@ export default {
           })
           this.layerEditor = new this.AMap.CircleEditor(this.map, this.drawingLayer)
           this.layerEditor.open()
+          this.layerIsEditing = true
           this.layerEditor.on('end', (e) => {
-            console.log(e)
+            this.afterDrawDone(e)
+          })
+          break
+        }
+        case 'polygon': {
+          this.drawingLayer = new this.AMap.Polygon({
+            map: this.map,
+            path: e.getPath(),
+            ...LAYER_OPTIONS
+          })
+
+          this.layerEditor = new this.AMap.PolyEditor(this.map, this.drawingLayer)
+          this.layerEditor.open()
+          this.layerIsEditing = true
+          this.layerEditor.on('end', (e) => {
+            this.afterDrawDone(e)
           })
           break
         }
@@ -134,13 +165,26 @@ export default {
       }
     },
     drawDone () {
+      this.layerEditor && this.layerEditor.close()
+    },
+    afterDrawDone (e) {
+      this.layerIsEditing = false
+      switch (this.drawType) {
+        case 'line':
 
+          break
+
+        default:
+          break
+      }
+      this.drawType = ''
     },
     drawCancel () {
+      this.layerIsEditing = false
+      this.drawType = ''
       this.mouseTool && this.mouseTool.close(true)
       this.layerEditor && this.layerEditor.close()
       this.drawingLayer && this.drawingLayer.hide()
-      this.drawType = ''
     }
 
   }
